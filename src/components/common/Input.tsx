@@ -7,6 +7,7 @@ interface inputProps {
   secureTextEntry?: boolean;
   value?: string;
   onChangeText?: (text: string) => void;
+  error?: string;
 }
 
 export default function Input({
@@ -16,18 +17,20 @@ export default function Input({
   secureTextEntry = false,
   value,
   onChangeText,
+  error,
 }: inputProps): React.JSX.Element {
   return (
     <View>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, error && styles.inputError]}
         onChangeText={onChangeText}
         value={value}
         placeholder={placeholder}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
       />
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 }
@@ -45,11 +48,19 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#e2e8f0', // Slate-200
-    backgroundColor: '#ffffff', // Ajusta según tu color de fondo
+    borderColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
     height: 48,
+  },
+  inputError: {
+    borderColor: '#ef4444',
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

@@ -1,26 +1,71 @@
 import React, {useEffect, useState} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {useSelector, useDispatch} from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from '../screens/auth/LoginScreen';
 import GlucoseScreen from '../screens/glucose/GlucoseScreen';
 import SplashScreen from '../screens/splash/SplashScreen';
-import ProfileScreen from '../screens/profile/ProfileScreen';
-import {useAppSelector} from '../store/slices/hooks';
+import {selectCurrentUser, setCredentials} from '../store/slices/authSlice';
+import {RootState} from '../store/store';
 
 const Stack = createNativeStackNavigator();
+const TOKEN_KEY = '@auth_token';
+const USER_KEY = '@auth_user';
 
 export default function AppNavigator(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
-  const {isAuthenticated} = useAppSelector(state => state.auth);
+  const user = useSelector(selectCurrentUser);
+  const token = useSelector((state: RootState) => state.auth.token);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000); // 2 segundos de splash screen
+    const checkStoredAuth = async () => {
+      try {
+        const [storedToken, storedUser] = await Promise.all([
+          AsyncStorage.getItem(TOKEN_KEY),
+          AsyncStorage.getItem(USER_KEY),
+        ]);
 
-    return () => clearTimeout(timer);
-  }, []);
+        if (storedToken && storedUser) {
+          // Restaurar la sesión guardada
+          dispatch(setCredentials({
+            token: storedToken,
+            user: JSON.parse(storedUser),
+          }));
+        }
+      } catch (error) {
+        console.error('Error checking stored auth:', error);
+      } finally {
+        // Simular un splash screen por al menos 1.5 segundos
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 1500);
+      }
+    };
 
+    checkStoredAuth();
+  }, [dispatch]);
+
+  // Guardar la sesión cuando el usuario se loguea
+  useEffect(() => {
+    const saveSession = async () => {
+      if (user && token) {
+        try {
+          await Promise.all([
+            AsyncStorage.setItem(TOKEN_KEY, token),
+            AsyncStorage.setItem(USER_KEY, JSON.stringify(user)),
+          ]);
+        } catch (error) {
+          console.error('Error saving session:', error);
+        }
+      }
+    };
+
+    saveSession();
+  }, [user, token]);
+
+  // Mostrar SplashScreen mientras se inicializa
   if (isLoading) {
     return <SplashScreen />;
   }
@@ -28,11 +73,14 @@ export default function AppNavigator(): React.JSX.Element {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {isAuthenticated ? (
-          <>
-            <Stack.Screen name="Glucose" component={GlucoseScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-          </>
+        {user && token ? (
+          <Stack.Screen
+            name="Glucose"
+            component={GlucoseScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
         ) : (
           <Stack.Screen
             name="Login"

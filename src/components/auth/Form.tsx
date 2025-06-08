@@ -1,49 +1,44 @@
-import {Alert, StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import Input from '../common/Input';
 import CustomButton from '../common/CustomButton';
-import {useState} from 'react';
-import {useAppDispatch, useAppSelector} from '../../store/slices/hooks';
-import {
-  loginFailure,
-  loginRequest,
-  loginSuccess,
-} from '../../store/slices/authSlice';
+import { useState} from 'react';
+import {useDispatch} from 'react-redux';
+import {setCredentials} from '../../store/slices/authSlice';
 import {LoginCredentials, Errors} from '../../types/auth';
 import {validateLoginForm} from '../../utils/validations';
-import {authService} from '../../services/auth/auth';
+import {useLoginMutation} from '../../services/auth/auth';
 
 export default function Form(): React.JSX.Element {
-  const [validationErrors, setValidationErrors] = useState<Errors>({});
-  const [credentials, setCredentials] = useState<LoginCredentials>({
-    email: '',
-    password: '',
+  const [credentials, setLoginCredentials] = useState<LoginCredentials>({
+    mail: '',
+    pass: '',
   });
+  const [validationErrors, setValidationErrors] = useState<Errors>({});
 
-  const {loading} = useAppSelector(state => state.auth);
-  const dispatch = useAppDispatch();
+  const dispatch = useDispatch();
+  const [login, {isLoading, error}] = useLoginMutation();
 
   const handleLogin = async () => {
-    const errors = validateLoginForm(credentials);
-    setValidationErrors(errors);
+    setValidationErrors({});
 
+    const errors = validateLoginForm(credentials);
     if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
     try {
-      dispatch(loginRequest());
-      //Simulate a login request
-      const response = await authService.login(credentials);
+      const response = await login({
+        mail: credentials.mail,
+        pass: credentials.pass,
+      }).unwrap();
+      console.log('✅ Login successful! Response:', response);
 
-      dispatch(
-        loginSuccess({
-          email: response.user.email,
-          token: response.token,
-        }),
-      );
-    } catch (err: any) {
-      dispatch(loginFailure(err.message));
-      Alert.alert('Error', err.message);
+      // Mapear el response correctamente
+      dispatch(setCredentials(response));
+      console.log('💾 Credentials dispatched to store');
+    } catch (err) {
+      console.error('❌ Login failed:', err);
     }
   };
 
@@ -53,43 +48,51 @@ export default function Form(): React.JSX.Element {
       <Text style={styles.subTitle}>
         Ingresa a tu panel para monitoriar tu salud!
       </Text>
+
       <View style={styles.inputContainer}>
         <Input
           label="Email"
           placeholder="Ingresa tu correo electrónico"
           keyboardType="email-address"
-          value={credentials.email}
-          onChangeText={text => setCredentials({...credentials, email: text})}
+          value={credentials.mail}
+          onChangeText={text =>
+            setLoginCredentials(prev => ({...prev, mail: text}))
+          }
+          error={validationErrors.mail}
         />
       </View>
+
       <View style={styles.inputContainer}>
         <Input
           label="Contraseña"
           placeholder="Ingresa tu contraseña"
           keyboardType="default"
           secureTextEntry={true}
-          value={credentials.password}
+          value={credentials.pass}
           onChangeText={text =>
-            setCredentials({...credentials, password: text})
+            setLoginCredentials(prev => ({...prev, pass: text}))
           }
+          error={validationErrors.pass}
         />
       </View>
+
+      {error && (
+        <Text style={styles.errorText}>
+          Error al iniciar sesión. Verifica tus credenciales.
+        </Text>
+      )}
+
       <Text style={styles.signUpText}>
         ¿No tienes una cuenta?{' '}
         <Text style={styles.signUpLink}>Regístrate aquí</Text>
       </Text>
+
       <CustomButton
-        title={loading ? 'Cargando...' : 'Iniciar Sesión'}
+        title={isLoading ? 'Cargando...' : 'Iniciar Sesión'}
         color="#007bff"
         onPress={handleLogin}
+        disabled={isLoading}
       />
-
-      {validationErrors.email && (
-        <Text style={styles.errorText}>{validationErrors.email}</Text>
-      )}
-      {validationErrors.password && (
-        <Text style={styles.errorText}>{validationErrors.password}</Text>
-      )}
     </View>
   );
 }
@@ -129,7 +132,8 @@ const styles = StyleSheet.create({
   errorText: {
     color: 'red',
     fontSize: 12,
-    marginTop: 15,
+    marginTop: 5,
+    marginBottom: 15,
     textAlign: 'center',
   },
 });

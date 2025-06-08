@@ -2,16 +2,15 @@ import {LoginCredentials, Errors} from '../types/auth';
 import {validateEmail} from './validateEmail';
 
 
-
 export const validateLoginForm = (credentials: LoginCredentials): Errors => {
   const errors: Errors = {};
 
-  if (!validateEmail(credentials.email)) {
-    errors.email = 'El email no es válido';
+  if (!validateEmail(credentials.mail)) {
+    errors.mail = 'El email no es válido';
   }
 
-  if (!credentials.password) {
-    errors.password = 'La contraseña es requerida';
+  if (!credentials.pass) {
+    errors.pass = 'La contraseña es requerida';
   }
 
   return errors;

@@ -1,22 +1,33 @@
 import React from 'react';
-import {TouchableOpacity, Text, StyleSheet} from 'react-native';
+import {TouchableOpacity, Text, StyleSheet, ActivityIndicator} from 'react-native';
 
 interface buttonProps {
   title?: string;
   color?: string;
   onPress?: () => void;
+  disabled?: boolean;
 }
 
 export default function CustomButton({
   title,
   color,
   onPress,
+  disabled = false,
 }: buttonProps): React.JSX.Element {
   return (
     <TouchableOpacity
-      style={[styles.button, {backgroundColor: color || '#007bff'}]}
-      onPress={onPress}>
-      <Text style={styles.buttonText}>{title || 'Click Me'}</Text>
+      style={[
+        styles.button,
+        {backgroundColor: color || '#007bff'},
+        disabled && styles.buttonDisabled,
+      ]}
+      onPress={onPress}
+      disabled={disabled}>
+      {disabled ? (
+        <ActivityIndicator color="white" />
+      ) : (
+        <Text style={styles.buttonText}>{title || 'Click Me'}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -36,7 +47,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-
+  buttonDisabled: {
+    opacity: 0.7,
+    elevation: 0,
+  },
   buttonText: {
     color: 'white',
     fontSize: 16,
